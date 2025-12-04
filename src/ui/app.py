@@ -2,7 +2,17 @@
 Streamlit UI for fake-news credibility scoring.
 """
 
+import sys
+from pathlib import Path
+
 import streamlit as st
+
+# Ensure project root is on the path when run by Streamlit Cloud
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SRC_ROOT = PROJECT_ROOT / "src"
+for p in (PROJECT_ROOT, SRC_ROOT):
+    if str(p) not in sys.path:
+        sys.path.append(str(p))
 
 from src.data.text_cleaning import clean_text
 from src.data.url_scrapper import fetch_article
