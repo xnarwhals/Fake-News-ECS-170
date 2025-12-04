@@ -43,3 +43,43 @@ def load_generic_csv(
     df = standardize_labels(df, label_col="label", positive_labels=positive_labels, negative_labels=negative_labels)
     df["text"] = df["text"].fillna("").astype(str).map(clean_text)
     return df
+
+
+def load_true_fake_dataset(
+    true_path: str = "data/raw/True.csv",
+    fake_path: str = "data/raw/Fake.csv",
+) -> pd.DataFrame:
+    """
+    Load the Kaggle fake/real news CSV pair, combine title+text, attach labels.
+    Labels: 1 = real/credible (True.csv), 0 = fake (Fake.csv).
+    """
+    true_csv = Path(true_path)
+    fake_csv = Path(fake_path)
+    if not true_csv.exists() or not fake_csv.exists():
+        return pd.DataFrame(columns=["text", "label", "source"])
+
+    true_df = pd.read_csv(true_csv)
+    fake_df = pd.read_csv(fake_csv)
+
+    # Combine title + text if both exist; else fallback to text
+    def _combine(df: pd.DataFrame) -> pd.Series:
+        if "title" in df.columns and "text" in df.columns:
+            return (df["title"].fillna("") + " " + df["text"].fillna("")).str.strip()
+        if "text" in df.columns:
+            return df["text"].fillna("")
+        raise ValueError("Expected 'text' column in dataset.")
+
+    true_df = true_df.copy()
+    fake_df = fake_df.copy()
+
+    true_df["text"] = _combine(true_df)
+    fake_df["text"] = _combine(fake_df)
+
+    true_df["label"] = 1
+    fake_df["label"] = 0
+    true_df["source"] = "true_csv"
+    fake_df["source"] = "fake_csv"
+
+    df = pd.concat([true_df[["text", "label", "source"]], fake_df[["text", "label", "source"]]], ignore_index=True)
+    df["text"] = df["text"].astype(str).map(clean_text)
+    return df

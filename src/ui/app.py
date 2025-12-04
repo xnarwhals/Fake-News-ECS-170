@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import streamlit as st
+import joblib
 
 # Ensure project root is on the path when run by Streamlit Cloud
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -16,17 +17,27 @@ for p in (PROJECT_ROOT, SRC_ROOT):
 
 from src.data.text_cleaning import clean_text
 from src.data.url_scrapper import fetch_article
+from src.data.load_datasets import load_true_fake_dataset
 from src.models.baseline import train_baseline
 from src.models.explainability import top_tfidf_features
 from src.models.uncertainty import confidence, predictive_entropy
 
+MODEL_PATH = PROJECT_ROOT / "models" / "baseline.joblib"
+
 
 @st.cache_resource
-def load_demo_model():
+def load_model():
     """
-    Train a tiny demo baseline model so the UI works without external files.
-    Replace this with loading your persisted baseline/transformer for the final deliverable.
+    Load a pre-trained baseline if available; otherwise train from True/Fake dataset; fallback to tiny demo.
     """
+    if MODEL_PATH.exists():
+        return joblib.load(MODEL_PATH)
+
+    df = load_true_fake_dataset()
+    if not df.empty:
+        model = train_baseline(df["text"], df["label"])
+        return model
+
     demo_texts = [
         "Breaking: government announces new verified policy to support science funding",
         "Exclusive: celebrity endorses miracle cure that scientists call fake",
@@ -38,12 +49,15 @@ def load_demo_model():
 
 
 def predict(text: str):
-    model = load_demo_model()
+    model = load_model()
     cleaned = clean_text(text)
-    prob_fake = model.predict_proba([cleaned])[0][0]
-    pred_label = int(prob_fake < 0.5)  # 1 = real/credible, 0 = fake
+    probs = model.predict_proba([cleaned])[0]
+    # Ensure we map probabilities to the correct class index
+    classes = list(model.classes_)
+    prob_real = float(probs[classes.index(1)]) if 1 in classes else 0.0
+    pred_label = int(model.predict([cleaned])[0])
     top_tokens = top_tfidf_features(model, cleaned, top_k=8)
-    return pred_label, prob_fake, top_tokens
+    return pred_label, prob_real, top_tokens
 
 
 def main():
@@ -71,11 +85,11 @@ def main():
             st.warning("Please provide text.")
             return
 
-        pred_label, prob_fake, top_tokens = predict(text_input)
+        pred_label, prob_real, top_tokens = predict(text_input)
         st.subheader("Result")
         st.write(f"Prediction: {'Real / Credible' if pred_label == 1 else 'Fake / Unreliable'}")
-        st.write(f"Confidence (non-fake prob): {prob_fake:.2f}")
-        st.write(f"Predictive entropy: {predictive_entropy(prob_fake):.3f} (lower = more certain)")
+        st.write(f"Confidence (real prob): {prob_real:.2f}")
+        st.write(f"Predictive entropy: {predictive_entropy(prob_real):.3f} (lower = more certain)")
 
         if top_tokens:
             st.subheader("Top Influential Tokens (TF-IDF)")
