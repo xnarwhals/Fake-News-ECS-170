@@ -7,6 +7,7 @@ from pathlib import Path
 
 import streamlit as st
 import joblib
+import langdetect
 
 # Ensure project root is on the path when run by Streamlit Cloud
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -23,33 +24,24 @@ from src.models.explainability import top_tfidf_features
 from src.models.uncertainty import confidence, predictive_entropy
 
 MODEL_PATH = PROJECT_ROOT / "models" / "baseline.joblib"
+MIN_TOKENS = 30
 
 
 @st.cache_resource
 def load_model():
     """
-    Load a pre-trained baseline if available; otherwise train from True/Fake dataset; fallback to tiny demo.
+    Load a pre-trained baseline from disk. No training on-the-fly to keep hosted app fast and deterministic.
     """
     if MODEL_PATH.exists():
         return joblib.load(MODEL_PATH)
 
-    df = load_true_fake_dataset()
-    if not df.empty:
-        model = train_baseline(df["text"], df["label"])
-        return model
-
-    demo_texts = [
-        "Breaking: government announces new verified policy to support science funding",
-        "Exclusive: celebrity endorses miracle cure that scientists call fake",
-        "Report: elections commission releases official and audited results",
-        "Shocking proof that the moon landing was staged according to anonymous source",
-    ]
-    demo_labels = [1, 0, 1, 0]
-    return train_baseline(demo_texts, demo_labels)
+    return None
 
 
 def predict(text: str):
     model = load_model()
+    if model is None:
+        raise RuntimeError("No trained model found. Please add models/baseline.joblib.")
     cleaned = clean_text(text)
     probs = model.predict_proba([cleaned])[0]
     # Ensure we map probabilities to the correct class index
@@ -63,7 +55,7 @@ def predict(text: str):
 def main():
     st.title("Fake News Credibility Checker (Demo)")
     st.write(
-        "Paste a headline/article or enter a URL. This demo uses a small TF-IDF baseline; swap with your trained model for the final submission."
+        "Paste a headline/article or enter a URL. The app uses a trained TF-IDF baseline saved under models/baseline.joblib."
     )
 
     input_mode = st.radio("Input mode", ["Text", "URL"], horizontal=True)
@@ -73,6 +65,11 @@ def main():
     threshold = st.slider("Decision threshold for 'Real' (prob >= threshold => Real)", 0.1, 0.9, 0.5, 0.05)
 
     if st.button("Analyze"):
+        model = load_model()
+        if model is None:
+            st.error("No trained model found. Please add models/baseline.joblib (run scripts/train_baseline.py locally).")
+            return
+
         if input_mode == "URL":
             if not url_input:
                 st.warning("Please provide a URL.")
@@ -87,8 +84,15 @@ def main():
             st.warning("Please provide text.")
             return
 
-        if len(text_input.split()) < 30:
+        if len(text_input.split()) < MIN_TOKENS:
             st.warning("The fetched text is very short; predictions may be unreliable. Please provide a fuller article.")
+
+        try:
+            lang = langdetect.detect(text_input)
+        except Exception:
+            lang = "unknown"
+        if lang != "en":
+            st.warning(f"Detected language: {lang}. Model was trained on English; results may be unreliable.")
 
         pred_label, prob_real, top_tokens = predict(text_input)
         pred_label = 1 if prob_real >= threshold else 0
