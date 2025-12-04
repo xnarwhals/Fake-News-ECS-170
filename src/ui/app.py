@@ -70,6 +70,8 @@ def main():
     text_input = st.text_area("Headline / Article", height=180) if input_mode == "Text" else ""
     url_input = st.text_input("URL") if input_mode == "URL" else ""
 
+    threshold = st.slider("Decision threshold for 'Real' (prob >= threshold => Real)", 0.1, 0.9, 0.5, 0.05)
+
     if st.button("Analyze"):
         if input_mode == "URL":
             if not url_input:
@@ -85,7 +87,11 @@ def main():
             st.warning("Please provide text.")
             return
 
+        if len(text_input.split()) < 30:
+            st.warning("The fetched text is very short; predictions may be unreliable. Please provide a fuller article.")
+
         pred_label, prob_real, top_tokens = predict(text_input)
+        pred_label = 1 if prob_real >= threshold else 0
         st.subheader("Result")
         st.write(f"Prediction: {'Real / Credible' if pred_label == 1 else 'Fake / Unreliable'}")
         st.write(f"Confidence (real prob): {prob_real:.2f}")
