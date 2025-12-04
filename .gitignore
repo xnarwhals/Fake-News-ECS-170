@@ -1,0 +1,11 @@
+.venv
+__pycache__/
+.DS_Store
+*.pyc
+models/distilbert/
+models/baseline.joblib
+data/raw/*.csv
+data/raw/*.tsv
+data/raw/*.json
+reports/
+artifacts/

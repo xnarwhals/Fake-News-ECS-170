@@ -2,11 +2,24 @@
 Train a DistilBERT classifier on the True/Fake dataset and save model+tokenizer for the UI.
 """
 
+import sys
+import os
 from pathlib import Path
+
+# Disable TF/vision integrations before importing transformers to avoid missing deps.
+os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
+os.environ.setdefault("TRANSFORMERS_NO_TORCHVISION", "1")
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
+
+# Ensure repo root on path
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+for p in (REPO_ROOT, SRC_ROOT):
+    if str(p) not in sys.path:
+        sys.path.append(str(p))
 
 from src.data.load_datasets import load_true_fake_dataset
 from src.models.transformer import NewsDataset, TransformerConfig
@@ -40,6 +53,7 @@ def main():
         logging_steps=50,
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
+        report_to="none",
     )
 
     trainer = Trainer(
@@ -54,7 +68,6 @@ def main():
 
     # Simple eval: use predicted labels for metrics
     val_logits = trainer.predict(val_dataset).predictions
-    val_probs = val_logits.argmax(axis=-1)
     val_pred_labels = val_logits.argmax(axis=-1)
     report = classification_report(labels_val, val_pred_labels)
     print("Validation metrics:", report)

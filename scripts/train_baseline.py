@@ -1,4 +1,4 @@
-"""
+pip install -r requirements.txt"""
 Train a TF-IDF + Logistic Regression baseline on the Kaggle True/Fake dataset and save it for the Streamlit app.
 """
 

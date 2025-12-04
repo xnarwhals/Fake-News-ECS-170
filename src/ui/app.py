@@ -8,6 +8,8 @@ from pathlib import Path
 import streamlit as st
 import joblib
 import langdetect
+import torch
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 # Ensure project root is on the path when run by Streamlit Cloud
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -25,6 +27,7 @@ from src.models.uncertainty import confidence, predictive_entropy
 
 MODEL_PATH = PROJECT_ROOT / "models" / "baseline.joblib"
 MIN_TOKENS = 30
+TRANSFORMER_DIR = PROJECT_ROOT / "models" / "distilbert"
 
 
 @st.cache_resource
@@ -38,7 +41,40 @@ def load_model():
     return None
 
 
+@st.cache_resource
+def load_transformer():
+    """
+    Load a fine-tuned transformer if available; otherwise return None.
+    """
+    if TRANSFORMER_DIR.exists():
+        tokenizer = AutoTokenizer.from_pretrained(TRANSFORMER_DIR)
+        model = AutoModelForSequenceClassification.from_pretrained(TRANSFORMER_DIR)
+        model.eval()
+        return tokenizer, model
+    return None
+
+
 def predict(text: str):
+    # Prefer transformer if present
+    transformer = load_transformer()
+    if transformer:
+        tokenizer, model = transformer
+        cleaned = clean_text(text)
+        inputs = tokenizer(
+            cleaned,
+            truncation=True,
+            padding="max_length",
+            max_length=256,
+            return_tensors="pt",
+        )
+        with torch.no_grad():
+            outputs = model(**inputs)
+            probs = torch.softmax(outputs.logits, dim=-1).cpu().numpy()[0]
+        prob_real = float(probs[1]) if probs.shape[0] > 1 else 0.0
+        pred_label = 1 if prob_real >= 0.5 else 0
+        top_tokens = []  # TODO: add transformer explainability if desired
+        return pred_label, prob_real, top_tokens
+
     model = load_model()
     if model is None:
         raise RuntimeError("No trained model found. Please add models/baseline.joblib.")
@@ -55,7 +91,7 @@ def predict(text: str):
 def main():
     st.title("Fake News Credibility Checker (Demo)")
     st.write(
-        "Paste a headline/article or enter a URL. The app uses a trained TF-IDF baseline saved under models/baseline.joblib."
+        "Paste a headline/article or enter a URL. The app uses a trained TF-IDF baseline (or DistilBERT if provided)."
     )
 
     input_mode = st.radio("Input mode", ["Text", "URL"], horizontal=True)
