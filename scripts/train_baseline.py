@@ -2,11 +2,19 @@
 Train a TF-IDF + Logistic Regression baseline on the Kaggle True/Fake dataset and save it for the Streamlit app.
 """
 
+import sys
 from pathlib import Path
 
 import joblib
 import pandas as pd
 from sklearn.model_selection import train_test_split
+
+# Ensure repo root on path when run directly
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+for p in (REPO_ROOT, SRC_ROOT):
+    if str(p) not in sys.path:
+        sys.path.append(str(p))
 
 from src.data.load_datasets import load_true_fake_dataset
 from src.models.baseline import train_baseline
