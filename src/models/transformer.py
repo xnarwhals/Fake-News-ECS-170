@@ -1,7 +1,3 @@
-"""
-Transformer fine-tuning utilities (e.g., DistilBERT) for fake-news detection.
-"""
-
 from dataclasses import dataclass
 from typing import Optional
 

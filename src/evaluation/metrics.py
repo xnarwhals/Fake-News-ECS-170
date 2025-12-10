@@ -22,5 +22,4 @@ def classification_report(y_true, y_pred, y_prob=None) -> Dict[str, float]:
 
 
 def confusion_matrix(y_true, y_pred) -> np.ndarray:
-    """Return confusion matrix."""
     return metrics.confusion_matrix(y_true, y_pred)

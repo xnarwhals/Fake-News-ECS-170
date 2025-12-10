@@ -4,12 +4,10 @@ This repo contains our ECS170 final project: a fake-news credibility classifier 
 
 ## Repo Layout
 - `data/`: raw/processed data (e.g., `data/raw/standardized.csv`); add other datasets like FakeNewsNet/LIAR here.
-- `notebooks/`: exploratory work (baseline and transformer experiments).
 - `src/data/`: loading, cleaning, standardization, and URL scraping.
 - `src/models/`: baseline TF-IDF+LogReg/SVM, transformer fine-tuning, explainability, and uncertainty helpers.
 - `src/evaluation/`: metrics and calibration utilities.
 - `src/ui/`: Streamlit app entry point.
-- `tests/`: place minimal unit tests/smoke tests here.
 
 ## Live App (deploy)
 https://fake-news-ecs-170-unk9x6vtxnwcbsu3f9ueyk.streamlit.app

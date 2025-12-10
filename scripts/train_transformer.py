@@ -1,6 +1,4 @@
-"""
-Train a DistilBERT classifier on the True/Fake dataset and save model+tokenizer for the UI.
-"""
+"""Train DistilBERT on the True/Fake dataset and save weights for the UI."""
 
 import sys
 import os

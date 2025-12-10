@@ -1,9 +1,7 @@
-"""
-URL fetcher with lightweight readability-style extraction to pull main article text.
-"""
+"""Small helper to fetch an article page and pull the main text."""
 
 from html import unescape
-from typing import Iterable, Optional
+from typing import Iterable
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -74,6 +72,6 @@ def extract_article_text(html: str) -> str:
 
 
 def fetch_article(url: str) -> str:
-    """Convenience wrapper to go from URL to plain text."""
+    """Convenience wrapper"""
     html = fetch_html(url)
     return extract_article_text(html)

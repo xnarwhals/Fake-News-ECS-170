@@ -1,6 +1,4 @@
-"""
-Streamlit UI for fake-news credibility scoring.
-"""
+"""Streamlit UI for fake-news credibility scoring."""
 
 import sys
 import os
