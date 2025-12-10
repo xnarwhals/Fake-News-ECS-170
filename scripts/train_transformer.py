@@ -14,6 +14,15 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
 
+# Provide a clear error if accelerate is missing before Trainer triggers it.
+try:
+    import accelerate  # noqa: F401
+except ImportError as exc:  # pragma: no cover - environment guard
+    raise SystemExit(
+        "Missing dependency: accelerate>=0.26.0 is required for Trainer. "
+        "Install with `pip install 'accelerate>=0.26.0'` (or update requirements)."
+    ) from exc
+
 # Ensure repo root on path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
@@ -38,22 +47,21 @@ def main():
     cfg = TransformerConfig()
     tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
     model = AutoModelForSequenceClassification.from_pretrained(cfg.model_name, num_labels=2)
+    # Make label semantics explicit for downstream inference/UI.
+    model.config.id2label = {0: "fake", 1: "real"}
+    model.config.label2id = {"fake": 0, "real": 1}
 
     train_dataset = NewsDataset(texts_train, labels_train, tokenizer, max_length=cfg.max_length)
     val_dataset = NewsDataset(texts_val, labels_val, tokenizer, max_length=cfg.max_length)
 
+    # Use minimal arguments for wider compatibility with older transformers versions.
     args = TrainingArguments(
         output_dir=cfg.output_dir,
         num_train_epochs=cfg.epochs,
         per_device_train_batch_size=cfg.batch_size,
         learning_rate=cfg.lr,
         weight_decay=cfg.weight_decay,
-        evaluation_strategy="epoch",
-        save_strategy="epoch",
         logging_steps=50,
-        load_best_model_at_end=True,
-        metric_for_best_model="eval_loss",
-        report_to="none",
     )
 
     trainer = Trainer(

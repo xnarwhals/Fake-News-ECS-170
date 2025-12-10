@@ -17,6 +17,6 @@ https://fake-news-ecs-170-unk9x6vtxnwcbsu3f9ueyk.streamlit.app
 ## Quickstart (local dev)
 1) Create a virtualenv with Python 3.10+ and install deps (`pip install -r requirements.txt` once added).
 2) Put training data under `data/` (True.csv and Fake.csv go in `data/raw/`; they’re auto-used).
-3) Train and save the baseline: `python3 scripts/train_baseline.py` (writes `models/baseline.joblib`).
+3) Train and save the baseline: `python3 scripts/train_baseline.py` (writes `models/baseline.joblib`; the app requires this and will not train on-the-fly). Optionally calibrate: `python3 scripts/calibrate_baseline.py` (writes `models/baseline_calibrated.joblib`).
 4) Prototype in `notebooks/` (baseline vs transformer).
-5) Run the Streamlit UI locally: `streamlit run src/ui/app.py` (it will load `models/baseline.joblib` or train from True/Fake if present).
+5) Run the Streamlit UI locally: `streamlit run src/ui/app.py` (it will load `models/baseline.joblib`; optional `models/distilbert/` if you trained the transformer).

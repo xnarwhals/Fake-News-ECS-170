@@ -1,4 +1,4 @@
-pip install -r requirements.txt"""
+"""
 Train a TF-IDF + Logistic Regression baseline on the Kaggle True/Fake dataset and save it for the Streamlit app.
 """
 
@@ -20,11 +20,18 @@ from src.data.load_datasets import load_true_fake_dataset
 from src.models.baseline import train_baseline
 from src.evaluation.metrics import classification_report
 
+MIN_TOKENS_TRAIN = 50
+
 
 def main():
     df = load_true_fake_dataset()
     if df.empty:
         raise SystemExit("No data found. Place True.csv and Fake.csv under data/raw/.")
+
+    df["length"] = df["text"].str.split().apply(len)
+    df = df[df["length"] >= MIN_TOKENS_TRAIN]
+    if df.empty:
+        raise SystemExit(f"No samples meet minimum length of {MIN_TOKENS_TRAIN} tokens.")
 
     train_df, val_df = train_test_split(df, test_size=0.2, stratify=df["label"], random_state=42)
 

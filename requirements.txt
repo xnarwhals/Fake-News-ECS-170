@@ -2,6 +2,7 @@ streamlit
 scikit-learn
 transformers
 torch
+accelerate>=0.26.0
 numpy
 pandas
 beautifulsoup4

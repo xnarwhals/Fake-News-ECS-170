@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup  # type: ignore
 
 KEEP_TAGS = ["article", "main", "section", "div"]
 TEXT_TAGS = ["p", "h1", "h2", "h3", "li"]
+MIN_TOKEN_THRESHOLD = 30  # Drop tiny chunks that are likely boilerplate.
 
 
 def fetch_html(url: str, user_agent: str = "Mozilla/5.0") -> str:
@@ -40,16 +41,28 @@ def extract_article_text(html: str) -> str:
     """
     soup = BeautifulSoup(html, "html.parser")
 
-    # Try structured containers first
-    containers = soup.find_all(KEEP_TAGS)
-    texts = []
-    for container in containers:
+    def _collect_from_container(container):
+        texts = []
         for tag in container.find_all(TEXT_TAGS):
             txt = tag.get_text(separator=" ", strip=True)
             if txt:
                 texts.append(txt)
-    if texts:
-        return _clean_text_chunks(texts)
+        return texts
+
+    # Try structured containers first and keep the one with most content.
+    candidates = soup.find_all(KEEP_TAGS)
+    best_texts: list[str] = []
+    max_tokens = 0
+    for container in candidates:
+        texts = _collect_from_container(container)
+        token_count = sum(len(t.split()) for t in texts)
+        if token_count < MIN_TOKEN_THRESHOLD:
+            continue
+        if token_count > max_tokens:
+            max_tokens = token_count
+            best_texts = texts
+    if best_texts:
+        return _clean_text_chunks(best_texts)
 
     # Fallback: grab all text tags
     texts = []
